@@ -17,20 +17,16 @@ import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.ads.appopen.AppOpenAd;
 import com.google.android.gms.ads.interstitial.InterstitialAd;
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
-import com.google.android.gms.ads.rewarded.RewardedAd;
-import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
 
 public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
     private AdView adView;
     private InterstitialAd interstitialAd;
-    private RewardedAd rewardedAd;
 
     // ID Uji Coba Resmi dari Google AdMob
     private static final String TEST_APP_OPEN_ID = "ca-app-pub-3940256099942544/9257395921";
     private static final String TEST_INTERSTITIAL_ID = "ca-app-pub-3940256099942544/1033173712";
-    private static final String TEST_REWARDED_ID = "ca-app-pub-3940256099942544/5224354917";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,7 +37,6 @@ public class MainActivity extends AppCompatActivity {
         MobileAds.initialize(this, initializationStatus -> {
             loadAppOpenAd();      // Iklan tayang saat aplikasi pertama dibuka
             loadInterstitialAd(); // Preload iklan untuk transisi/pindah level
-            loadRewardedAd();     // Preload iklan untuk reward
         });
 
         // 2. Banner Ad (Tampil di bagian bawah)
@@ -111,37 +106,6 @@ public class MainActivity extends AppCompatActivity {
                 loadInterstitialAd(); // Memuat ulang untuk transisi level berikutnya
             } else {
                 loadInterstitialAd();
-            }
-        });
-    }
-
-    // --- 3. REWARDED AD (Saat Klaim Hadiah / Buka Level Terkunci) ---
-    private void loadRewardedAd() {
-        AdRequest adRequest = new AdRequest.Builder().build();
-        RewardedAd.load(this, TEST_REWARDED_ID, adRequest,
-            new RewardedAdLoadCallback() {
-                @Override
-                public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                    rewardedAd = null;
-                }
-
-                @Override
-                public void onAdLoaded(@NonNull RewardedAd ad) {
-                    rewardedAd = ad;
-                }
-            });
-    }
-
-    @JavascriptInterface
-    public void panggilIklanReward() {
-        runOnUiThread(() -> {
-            if (rewardedAd != null) {
-                rewardedAd.show(MainActivity.this, rewardItem -> {
-                    webView.loadUrl("javascript:onRewardSuccess()");
-                    loadRewardedAd(); // Memuat ulang iklan reward
-                });
-            } else {
-                loadRewardedAd();
             }
         });
     }
