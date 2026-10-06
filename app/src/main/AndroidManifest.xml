@@ -7,13 +7,11 @@
     <application
         android:allowBackup="true"
         android:label="SOS Championship"
+        android:icon="@drawable/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.NoActionBar">
 
-        <!-- 
-          MODE UJI COBA (Test App ID): ca-app-pub-3940256099942544~3347511713
-          MODE RILIS (Ubah saat rilis asli): Ganti nilai di bawah dengan App ID resmi kamu (pakai tanda ~)
-        -->
+        <!-- Test App ID AdMob -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-3940256099942544~3347511713"/>
