@@ -10,13 +10,16 @@
         android:layout_height="match_parent"
         android:layout_above="@id/adView" />
 
-    <!-- Banner Utama AdMob -->
+    <!-- 
+      MODE UJI COBA (Test Banner ID): ca-app-pub-3940256099942544/6300978111
+      MODE RILIS (Ubah saat rilis asli): ca-app-pub-6983364109428063/6624153015
+    -->
     <com.google.android.gms.ads.AdView
         android:id="@+id/adView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         ads:adSize="BANNER"
-        ads:adUnitId="ca-app-pub-6983364109428063/6624153015" />
+        ads:adUnitId="ca-app-pub-3940256099942544/6300978111" />
 
 </RelativeLayout>
