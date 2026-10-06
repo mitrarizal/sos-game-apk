@@ -20,14 +20,17 @@ jobs:
           java-version: '17'
 
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Generate Gradle Wrapper
+        run: gradle wrapper
 
       - name: Build Debug APK
         run: |
-          chmod +x gradlew || true
+          chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: Simpan APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: sos-game-apk
