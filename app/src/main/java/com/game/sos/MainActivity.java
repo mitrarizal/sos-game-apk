@@ -44,10 +44,10 @@ public class MainActivity extends AppCompatActivity {
 
         progressBar = findViewById(R.id.progressBar);
 
-        // 1. Inisialisasi SDK AdMob & Muat Iklan
+        // 1. Inisialisasi SDK AdMob & Preload Iklan
         MobileAds.initialize(this, initializationStatus -> {
-            loadAppOpenAd();      // Iklan tayang saat aplikasi pertama dibuka
-            loadInterstitialAd(); // Preload iklan untuk transisi/pindah level
+            loadAppOpenAd();      // Iklan saat pertama kali dibuka
+            loadInterstitialAd(); // Preload iklan untuk diklik di menu level
         });
 
         // 2. Banner Ad (Tampil di bagian bawah)
@@ -59,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
         // 3. Konfigurasi WebView
         webView = findViewById(R.id.webview);
 
-        // OPTIMASI VISUAL & AKSELERASI PERANGKAT KERAS
+        // Optimasi Warna Latar Belakang & Hardware Acceleration (Mencegah Layar Putih)
         webView.setBackgroundColor(Color.parseColor("#0f172a")); 
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);    
 
@@ -71,8 +71,6 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setAllowContentAccess(true);
         webSettings.setUseWideViewPort(true);
         webSettings.setLoadWithOverviewMode(true);
-
-        // OPTIMASI CACHE
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
         // Menghubungkan JavaScript Blogspot ke Java Android
@@ -80,11 +78,9 @@ public class MainActivity extends AppCompatActivity {
 
         webView.setWebChromeClient(new WebChromeClient());
         
-        // Mencegah layar gelap/blank & mengunci navigasi tetap di game
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                // Mencegah WebView melakukan pengalihan URL ke luar game
                 String url = request.getUrl().toString();
                 if (url.contains("gameedukatif17.blogspot.com")) {
                     return false;
@@ -140,7 +136,7 @@ public class MainActivity extends AppCompatActivity {
         );
     }
 
-    // --- 2. INTERSTITIAL AD (SIKLUS HIDUP AMAN) ---
+    // --- 2. INTERSTITIAL AD (KHUSUS UNTUK KLIK LEVEL) ---
     private void loadInterstitialAd() {
         AdRequest adRequest = new AdRequest.Builder().build();
         InterstitialAd.load(this, TEST_INTERSTITIAL_ID, adRequest,
@@ -149,13 +145,13 @@ public class MainActivity extends AppCompatActivity {
                 public void onAdLoaded(@NonNull InterstitialAd ad) {
                     interstitialAd = ad;
                     
-                    // Pasang Callback untuk menangani event saat iklan ditutup atau gagal tampil
+                    // Callback saat iklan selesai atau ditutup
                     interstitialAd.setFullScreenContentCallback(new FullScreenContentCallback() {
                         @Override
                         public void onAdDismissedFullScreenContent() {
-                            // Dikelola setelah iklan ditutup pengguna
+                            // Setelah iklan ditutup pemain, kosongkan dan siapkan iklan untuk klik level berikutnya
                             interstitialAd = null;
-                            loadInterstitialAd(); // Baru muat iklan berikutnya di sini
+                            loadInterstitialAd();
                         }
 
                         @Override
@@ -173,13 +169,14 @@ public class MainActivity extends AppCompatActivity {
             });
     }
 
+    // Dipanggil KHUSUS dari JavaScript saat tombol Level diklik
     @JavascriptInterface
     public void panggilIklanInterstisial() {
         runOnUiThread(() -> {
             if (interstitialAd != null) {
                 interstitialAd.show(MainActivity.this);
             } else {
-                // Jika iklan belum siap, muat untuk kesempatan berikutnya tanpa mengganggu game
+                // Jika iklan belum siap saat diklik, otomatis muat ulang tanpa mengganggu game
                 loadInterstitialAd();
             }
         });
