@@ -80,11 +80,10 @@ public class MainActivity extends AppCompatActivity {
 
         webView.setWebChromeClient(new WebChromeClient());
         
-        // Mencegah layar gelap/blank & mengunci navigasi tetap di game
+        // Mencegah layar gelap/blank & Mengubah Tampilan Offline Custom
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                // Mencegah WebView melakukan pengalihan URL ke luar game
                 String url = request.getUrl().toString();
                 if (url.contains("gameedukatif17.blogspot.com")) {
                     return false;
@@ -109,15 +108,36 @@ public class MainActivity extends AppCompatActivity {
                 webView.setVisibility(View.VISIBLE);
             }
 
+            // GANTI TAMPILAN ERROR DEFAULT ANDROID DENGAN TAMPILAN CUSTOM
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 super.onReceivedError(view, request, error);
+                
                 if (request.isForMainFrame()) {
-                    Log.e("WebView", "Error memuat halaman utama: " + error.getDescription());
+                    // Desain HTML Custom Offline (Tautan Blog Tersembunyi)
+                    String customOfflineHtml = "<html><head>" +
+                            "<meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+                            "<style>" +
+                            "body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; padding: 20px; box-sizing: border-box; }" +
+                            ".icon { font-size: 60px; margin-bottom: 15px; }" +
+                            "h2 { margin: 0 0 10px 0; font-size: 22px; font-weight: 800; color: #f8fafc; }" +
+                            "p { font-size: 13px; color: #94a3b8; margin-bottom: 25px; line-height: 1.5; max-width: 280px; }" +
+                            ".btn { background-color: #2563eb; color: #ffffff; border: none; padding: 12px 28px; border-radius: 12px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 14px rgba(37,99,235,0.4); transition: 0.2s; }" +
+                            ".btn:active { transform: scale(0.95); background-color: #1d4ed8; }" +
+                            "</style></head><body>" +
+                            "<div class='icon'>📡</div>" +
+                            "<h2>Koneksi Terputus</h2>" +
+                            "<p>Aplikasi membutuhkan koneksi internet untuk memuat game. Silakan periksa jaringan Anda lalu coba lagi.</p>" +
+                            "<button class='btn' onclick='window.location.href=\"https://gameedukatif17.blogspot.com/\"'>Coba Lagi</button>" +
+                            "</body></html>";
+
+                    // Muat halaman HTML custom
+                    view.loadDataWithBaseURL("https://gameedukatif17.blogspot.com/", customOfflineHtml, "text/html", "UTF-8", null);
                 }
             }
         });
 
+        // Load URL Game Utama
         webView.loadUrl("https://gameedukatif17.blogspot.com/");
     }
 
