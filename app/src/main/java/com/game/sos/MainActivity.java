@@ -1,12 +1,15 @@
 package com.game.sos;
 
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.ProgressBar;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -23,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private AdView adView;
     private InterstitialAd interstitialAd;
+    private ProgressBar progressBar;
 
     // ID Uji Coba Resmi dari Google AdMob
     private static final String TEST_APP_OPEN_ID = "ca-app-pub-3940256099942544/9257395921";
@@ -32,6 +36,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        progressBar = findViewById(R.id.progressBar);
 
         // 1. Inisialisasi SDK AdMob & Muat Iklan
         MobileAds.initialize(this, initializationStatus -> {
@@ -54,15 +60,38 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setUseWideViewPort(true);
         webSettings.setLoadWithOverviewMode(true);
 
+        // OPTIMASI CACHE
+        webSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+
         // Menghubungkan JavaScript Blogspot ke Java Android
         webView.addJavascriptInterface(this, "AndroidApp");
 
         webView.setWebChromeClient(new WebChromeClient());
-        webView.setWebViewClient(new WebViewClient());
+        
+        // Mencegah layar gelap/blank saat pertama kali memuat URL
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                super.onPageStarted(view, url, favicon);
+                if (progressBar != null) {
+                    progressBar.setVisibility(View.VISIBLE);
+                }
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                if (progressBar != null) {
+                    progressBar.setVisibility(View.GONE);
+                }
+                webView.setVisibility(View.VISIBLE); // Tampilkan game hanya jika sudah siap
+            }
+        });
+
         webView.loadUrl("https://gameedukatif17.blogspot.com/");
     }
 
-    // --- 1. APP OPEN AD (Saat Pertama Kali Membuka Aplikasi) ---
+    // --- 1. APP OPEN AD ---
     private void loadAppOpenAd() {
         AdRequest request = new AdRequest.Builder().build();
         AppOpenAd.load(
@@ -81,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
         );
     }
 
-    // --- 2. INTERSTITIAL AD (Saat Pindah / Pilih Level) ---
+    // --- 2. INTERSTITIAL AD ---
     private void loadInterstitialAd() {
         AdRequest adRequest = new AdRequest.Builder().build();
         InterstitialAd.load(this, TEST_INTERSTITIAL_ID, adRequest,
@@ -103,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             if (interstitialAd != null) {
                 interstitialAd.show(MainActivity.this);
-                loadInterstitialAd(); // Memuat ulang untuk transisi level berikutnya
+                loadInterstitialAd();
             } else {
                 loadInterstitialAd();
             }
