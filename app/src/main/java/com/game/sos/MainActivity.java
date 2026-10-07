@@ -1,6 +1,7 @@
 package com.game.sos;
 
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -53,6 +54,11 @@ public class MainActivity extends AppCompatActivity {
 
         // 3. Konfigurasi WebView
         webView = findViewById(R.id.webview);
+
+        // OPTIMASI VISUAL & AKSELERASI PERANGKAT KERAS (Mencegah Layar Putih & Loading Lama)
+        webView.setBackgroundColor(Color.parseColor("#121212")); 
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);    
+
         WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
