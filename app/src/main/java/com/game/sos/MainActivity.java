@@ -16,8 +16,10 @@ import android.widget.ProgressBar;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.gms.ads.AdError;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.ads.appopen.AppOpenAd;
@@ -50,13 +52,15 @@ public class MainActivity extends AppCompatActivity {
 
         // 2. Banner Ad (Tampil di bagian bawah)
         adView = findViewById(R.id.adView);
-        adView.loadAd(new AdRequest.Builder().build());
+        if (adView != null) {
+            adView.loadAd(new AdRequest.Builder().build());
+        }
 
         // 3. Konfigurasi WebView
         webView = findViewById(R.id.webview);
 
-        // OPTIMASI VISUAL & AKSELERASI PERANGKAT KERAS (Mencegah Layar Putih & Loading Lama)
-        webView.setBackgroundColor(Color.parseColor("#121212")); 
+        // OPTIMASI VISUAL & AKSELERASI PERANGKAT KERAS
+        webView.setBackgroundColor(Color.parseColor("#0f172a")); 
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);    
 
         WebSettings webSettings = webView.getSettings();
@@ -69,15 +73,25 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setLoadWithOverviewMode(true);
 
         // OPTIMASI CACHE
-        webSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
         // Menghubungkan JavaScript Blogspot ke Java Android
         webView.addJavascriptInterface(this, "AndroidApp");
 
         webView.setWebChromeClient(new WebChromeClient());
         
-        // Mencegah layar gelap/blank saat pertama kali memuat URL & Menangani Offline
+        // Mencegah layar gelap/blank & mengunci navigasi tetap di game
         webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                // Mencegah WebView melakukan pengalihan URL ke luar game
+                String url = request.getUrl().toString();
+                if (url.contains("gameedukatif17.blogspot.com")) {
+                    return false;
+                }
+                return true; 
+            }
+
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 super.onPageStarted(view, url, favicon);
@@ -92,15 +106,14 @@ public class MainActivity extends AppCompatActivity {
                 if (progressBar != null) {
                     progressBar.setVisibility(View.GONE);
                 }
-                webView.setVisibility(View.VISIBLE); // Tampilkan game hanya jika sudah siap
+                webView.setVisibility(View.VISIBLE);
             }
 
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 super.onReceivedError(view, request, error);
-                // Hanya alihkan jika error terjadi pada halaman utama
                 if (request.isForMainFrame()) {
-                    view.loadUrl("file:///android_asset/offline.html");
+                    Log.e("WebView", "Error memuat halaman utama: " + error.getDescription());
                 }
             }
         });
@@ -127,7 +140,7 @@ public class MainActivity extends AppCompatActivity {
         );
     }
 
-    // --- 2. INTERSTITIAL AD ---
+    // --- 2. INTERSTITIAL AD (SIKLUS HIDUP AMAN) ---
     private void loadInterstitialAd() {
         AdRequest adRequest = new AdRequest.Builder().build();
         InterstitialAd.load(this, TEST_INTERSTITIAL_ID, adRequest,
@@ -135,6 +148,22 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onAdLoaded(@NonNull InterstitialAd ad) {
                     interstitialAd = ad;
+                    
+                    // Pasang Callback untuk menangani event saat iklan ditutup atau gagal tampil
+                    interstitialAd.setFullScreenContentCallback(new FullScreenContentCallback() {
+                        @Override
+                        public void onAdDismissedFullScreenContent() {
+                            // Dikelola setelah iklan ditutup pengguna
+                            interstitialAd = null;
+                            loadInterstitialAd(); // Baru muat iklan berikutnya di sini
+                        }
+
+                        @Override
+                        public void onAdFailedToShowFullScreenContent(@NonNull AdError adError) {
+                            interstitialAd = null;
+                            loadInterstitialAd();
+                        }
+                    });
                 }
 
                 @Override
@@ -149,8 +178,8 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             if (interstitialAd != null) {
                 interstitialAd.show(MainActivity.this);
-                loadInterstitialAd();
             } else {
+                // Jika iklan belum siap, muat untuk kesempatan berikutnya tanpa mengganggu game
                 loadInterstitialAd();
             }
         });
