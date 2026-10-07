@@ -34,8 +34,8 @@ public class MainActivity extends AppCompatActivity {
     private ProgressBar progressBar;
 
     // ID Uji Coba Resmi dari Google AdMob
-    private static final String TEST_APP_OPEN_ID = "ca-app-pub-3940256099942544/9257395921";
-    private static final String TEST_INTERSTITIAL_ID = "ca-app-pub-3940256099942544/1033173712";
+    private static final String TEST_APP_OPEN_ID = "ca-app-pub-6983364109428063/4766868173";
+    private static final String TEST_INTERSTITIAL_ID = "ca-app-pub-6983364109428063/8538592226";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
