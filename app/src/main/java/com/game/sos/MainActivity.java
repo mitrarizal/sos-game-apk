@@ -6,6 +6,8 @@ import android.util.Log;
 import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -68,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
 
         webView.setWebChromeClient(new WebChromeClient());
         
-        // Mencegah layar gelap/blank saat pertama kali memuat URL
+        // Mencegah layar gelap/blank saat pertama kali memuat URL & Menangani Offline
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
@@ -85,6 +87,15 @@ public class MainActivity extends AppCompatActivity {
                     progressBar.setVisibility(View.GONE);
                 }
                 webView.setVisibility(View.VISIBLE); // Tampilkan game hanya jika sudah siap
+            }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                super.onReceivedError(view, request, error);
+                // Hanya alihkan jika error terjadi pada halaman utama
+                if (request.isForMainFrame()) {
+                    view.loadUrl("file:///android_asset/offline.html");
+                }
             }
         });
 
