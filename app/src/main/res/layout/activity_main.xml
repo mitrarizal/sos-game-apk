@@ -4,11 +4,19 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- Indikator Loading muter di tengah layar -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true" />
+
     <WebView
         android:id="@+id/webview"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@id/adView" />
+        android:layout_above="@id/adView"
+        android:visibility="invisible" />
 
     <!-- 
       MODE UJI COBA (Test Banner ID): ca-app-pub-3940256099942544/6300978111
