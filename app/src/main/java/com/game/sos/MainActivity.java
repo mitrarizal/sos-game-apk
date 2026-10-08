@@ -107,9 +107,13 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                super.onReceivedError(view, request, error);
                 if (request.isForMainFrame()) {
-                    Log.e("WebView", "Error memuat halaman utama: " + error.getDescription());
+                    String html = "<html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+                            + "<style>body{display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background-color:#0f172a;}"
+                            + "img{max-width:80%;height:auto;}</style></head>"
+                            + "<body><img src='file:///android_asset/no_internet.png'></body></html>";
+                    
+                    view.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "UTF-8", null);
                 }
             }
         });
