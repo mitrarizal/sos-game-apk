@@ -13,6 +13,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -32,8 +33,11 @@ public class MainActivity extends AppCompatActivity {
     private InterstitialAd interstitialAd;
     private ProgressBar progressBar;
 
-    // ID Uji Coba Resmi Interstitial Ad dari Google AdMob
-    private static final String TEST_INTERSTITIAL_ID = "ca-app-pub-6983364109428063/8538592226";
+    // Status loading untuk mencegah multiple request ke AdMob
+    private boolean isInterstitialLoading = false;
+
+    // ID Unit Iklan Interstitial
+    private static final String INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-6983364109428063/8538592226";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,12 +46,12 @@ public class MainActivity extends AppCompatActivity {
 
         progressBar = findViewById(R.id.progressBar);
 
-        // 1. Inisialisasi SDK AdMob & Preload Iklan Interstitial secara aman
+        // 1. Inisialisasi SDK AdMob & Preload Iklan Interstitial
         MobileAds.initialize(this, initializationStatus -> {
-            loadInterstitialAd(); // Preload iklan untuk diklik di menu level
+            loadInterstitialAd();
         });
 
-        // 2. Banner Ad (Tampil di bagian bawah)
+        // 2. Banner Ad
         adView = findViewById(R.id.adView);
         if (adView != null) {
             adView.loadAd(new AdRequest.Builder().build());
@@ -55,8 +59,6 @@ public class MainActivity extends AppCompatActivity {
 
         // 3. Konfigurasi WebView
         webView = findViewById(R.id.webview);
-
-        // Optimasi Warna Latar Belakang & Hardware Acceleration (Mencegah Layar Putih)
         webView.setBackgroundColor(Color.parseColor("#0f172a")); 
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);    
 
@@ -70,9 +72,7 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setLoadWithOverviewMode(true);
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
-        // Menghubungkan JavaScript Blogspot ke Java Android
         webView.addJavascriptInterface(this, "AndroidApp");
-
         webView.setWebChromeClient(new WebChromeClient());
         
         webView.setWebViewClient(new WebViewClient() {
@@ -116,18 +116,35 @@ public class MainActivity extends AppCompatActivity {
         });
 
         webView.loadUrl("https://gameedukatif17.blogspot.com/");
+
+        // Penanganan tombol kembali modern
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (webView != null && webView.canGoBack()) {
+                    webView.goBack();
+                } else {
+                    finish();
+                }
+            }
+        });
     }
 
-    // --- INTERSTITIAL AD (KHUSUS UNTUK KLIK LEVEL) ---
+    // LOGIKA IKLAN INTERSTITIAL
     private void loadInterstitialAd() {
+        if (isInterstitialLoading || interstitialAd != null) {
+            return;
+        }
+        isInterstitialLoading = true;
+
         AdRequest adRequest = new AdRequest.Builder().build();
-        InterstitialAd.load(this, TEST_INTERSTITIAL_ID, adRequest,
+        InterstitialAd.load(this, INTERSTITIAL_AD_UNIT_ID, adRequest,
             new InterstitialAdLoadCallback() {
                 @Override
                 public void onAdLoaded(@NonNull InterstitialAd ad) {
                     interstitialAd = ad;
+                    isInterstitialLoading = false;
                     
-                    // Callback saat iklan selesai atau ditutup
                     interstitialAd.setFullScreenContentCallback(new FullScreenContentCallback() {
                         @Override
                         public void onAdDismissedFullScreenContent() {
@@ -146,11 +163,11 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
                     interstitialAd = null;
+                    isInterstitialLoading = false;
                 }
             });
     }
 
-    // Dipanggil KHUSUS dari JavaScript saat tombol Level diklik
     @JavascriptInterface
     public void panggilIklanInterstisial() {
         runOnUiThread(() -> {
@@ -162,12 +179,25 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    // SIKLUS HIDUP (LIFECYCLE MANAGEMENT)
     @Override
-    public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
+    protected void onPause() {
+        if (adView != null) adView.pause();
+        if (webView != null) webView.onPause();
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (adView != null) adView.resume();
+        if (webView != null) webView.onResume();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (adView != null) adView.destroy();
+        if (webView != null) webView.destroy();
+        super.onDestroy();
     }
 }
