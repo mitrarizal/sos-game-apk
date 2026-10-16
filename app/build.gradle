@@ -1,6 +1,6 @@
 plugins {
     id 'com.android.application'
-    id 'com.google.gms.google-services' // <-- Plugin Google Services
+    id 'com.google.gms.google-services'
 }
 
 android {
@@ -44,10 +44,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.11.0'
     implementation 'com.google.android.gms:play-services-ads:23.0.0'
 
-    // Firebase BoM & Analytics
-    implementation platform('com.google.firebase:firebase-bom:35.0.1')
+    // Menggunakan Firebase BoM versi stabil (v32.8.1) yang aman untuk Java & tanpa DataStore
+    implementation platform('com.google.firebase:firebase-bom:32.8.1')
     implementation 'com.google.firebase:firebase-analytics'
-
-    // Wajib ditambahkan untuk mengatasi error PreferenceDataStoreDelegateKt
-    implementation 'androidx.datastore:datastore-preferences:1.1.1'
 }
