@@ -22,7 +22,6 @@ import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
-import com.google.android.gms.ads.appopen.AppOpenAd;
 import com.google.android.gms.ads.interstitial.InterstitialAd;
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
 
@@ -33,8 +32,7 @@ public class MainActivity extends AppCompatActivity {
     private InterstitialAd interstitialAd;
     private ProgressBar progressBar;
 
-    // ID Uji Coba Resmi dari Google AdMob
-    private static final String TEST_APP_OPEN_ID = "ca-app-pub-6983364109428063/4766868173";
+    // ID Uji Coba Resmi Interstitial Ad dari Google AdMob
     private static final String TEST_INTERSTITIAL_ID = "ca-app-pub-6983364109428063/8538592226";
 
     @Override
@@ -44,9 +42,8 @@ public class MainActivity extends AppCompatActivity {
 
         progressBar = findViewById(R.id.progressBar);
 
-        // 1. Inisialisasi SDK AdMob & Preload Iklan
+        // 1. Inisialisasi SDK AdMob & Preload Iklan Interstitial secara aman
         MobileAds.initialize(this, initializationStatus -> {
-            loadAppOpenAd();      // Iklan saat pertama kali dibuka
             loadInterstitialAd(); // Preload iklan untuk diklik di menu level
         });
 
@@ -121,26 +118,7 @@ public class MainActivity extends AppCompatActivity {
         webView.loadUrl("https://gameedukatif17.blogspot.com/");
     }
 
-    // --- 1. APP OPEN AD ---
-    private void loadAppOpenAd() {
-        AdRequest request = new AdRequest.Builder().build();
-        AppOpenAd.load(
-            this, TEST_APP_OPEN_ID, request,
-            new AppOpenAd.AppOpenAdLoadCallback() {
-                @Override
-                public void onAdLoaded(@NonNull AppOpenAd ad) {
-                    ad.show(MainActivity.this);
-                }
-
-                @Override
-                public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                    Log.e("AdMob", "App Open Ad gagal dimuat: " + loadAdError.getMessage());
-                }
-            }
-        );
-    }
-
-    // --- 2. INTERSTITIAL AD (KHUSUS UNTUK KLIK LEVEL) ---
+    // --- INTERSTITIAL AD (KHUSUS UNTUK KLIK LEVEL) ---
     private void loadInterstitialAd() {
         AdRequest adRequest = new AdRequest.Builder().build();
         InterstitialAd.load(this, TEST_INTERSTITIAL_ID, adRequest,
@@ -153,7 +131,6 @@ public class MainActivity extends AppCompatActivity {
                     interstitialAd.setFullScreenContentCallback(new FullScreenContentCallback() {
                         @Override
                         public void onAdDismissedFullScreenContent() {
-                            // Setelah iklan ditutup pemain, kosongkan dan siapkan iklan untuk klik level berikutnya
                             interstitialAd = null;
                             loadInterstitialAd();
                         }
@@ -180,7 +157,6 @@ public class MainActivity extends AppCompatActivity {
             if (interstitialAd != null) {
                 interstitialAd.show(MainActivity.this);
             } else {
-                // Jika iklan belum siap saat diklik, otomatis muat ulang tanpa mengganggu game
                 loadInterstitialAd();
             }
         });
