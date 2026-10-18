@@ -1,9 +1,13 @@
 package com.game.sos;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
@@ -15,6 +19,7 @@ import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.ads.AdError;
@@ -33,6 +38,12 @@ public class MainActivity extends AppCompatActivity {
     private InterstitialAd interstitialAd;
     private ProgressBar progressBar;
 
+    // Variabel untuk pemantau jaringan internet
+    private ConnectivityManager connectivityManager;
+    private ConnectivityManager.NetworkCallback networkCallback;
+    private AlertDialog offlineDialog;
+    private boolean isFirstLoad = true;
+
     // Status loading untuk mencegah multiple request ke AdMob
     private boolean isInterstitialLoading = false;
 
@@ -45,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         progressBar = findViewById(R.id.progressBar);
+        connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
         // 1. Inisialisasi SDK AdMob & Preload Iklan Interstitial
         MobileAds.initialize(this, initializationStatus -> {
@@ -105,17 +117,39 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
-                    String html = "<html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'>"
-                            + "<style>body{display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background-color:#0f172a;}"
-                            + "img{max-width:80%;height:auto;}</style></head>"
-                            + "<body><img src='file:///android_asset/no_internet.png'></body></html>";
-                    
-                    view.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "UTF-8", null);
+                    showOfflinePage(view);
                 }
             }
         });
 
-        webView.loadUrl("https://gameedukatif17.blogspot.com/");
+        // Setup Network Callback untuk deteksi online/offline secara realtime
+        networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(@NonNull Network network) {
+                runOnUiThread(() -> {
+                    if (offlineDialog != null && offlineDialog.isShowing()) {
+                        offlineDialog.dismiss();
+                    }
+                    // Muat ulang halaman blog jika sebelumnya offline
+                    if (webView != null) {
+                        webView.reload();
+                    }
+                });
+            }
+
+            @Override
+            public void onLost(@NonNull Network network) {
+                runOnUiThread(() -> showOfflineDialog());
+            }
+        };
+
+        // Cek internet di awal pembukaan aplikasi
+        if (!isInternetAvailable()) {
+            showOfflinePage(webView);
+            showOfflineDialog();
+        } else {
+            webView.loadUrl("https://gameedukatif17.blogspot.com/");
+        }
 
         // Penanganan tombol kembali modern
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
@@ -128,6 +162,52 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    // Fungsi menampilkan tampilan gambar offline di WebView
+    private void showOfflinePage(WebView view) {
+        String html = "<html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+                + "<style>body{display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background-color:#0f172a;}"
+                + "img{max-width:80%;height:auto;}</style></head>"
+                + "<body><img src='file:///android_asset/no_internet.png'></body></html>";
+        view.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "UTF-8", null);
+    }
+
+    // Fungsi Dialog Peringatan Offline (Tidak bisa ditutup sembarangan)
+    private void showOfflineDialog() {
+        if (offlineDialog != null && offlineDialog.isShowing()) return;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Koneksi Internet Terputus");
+        builder.setMessage("Game ini memerlukan koneksi internet aktif untuk dimainkan.");
+        builder.setCancelable(false);
+        builder.setPositiveButton("Coba Lagi", (dialog, which) -> {
+            if (!isInternetAvailable()) {
+                showOfflineDialog();
+            } else {
+                dialog.dismiss();
+                if (webView != null) {
+                    webView.loadUrl("https://gameedukatif17.blogspot.com/");
+                }
+            }
+        });
+        builder.setNegativeButton("Keluar", (dialog, which) -> finish());
+
+        offlineDialog = builder.create();
+        offlineDialog.setCanceledOnTouchOutside(false);
+        offlineDialog.show();
+    }
+
+    // Pengecek ketersediaan jaringan fisik
+    private boolean isInternetAvailable() {
+        if (connectivityManager == null) return false;
+        Network network = connectivityManager.getActiveNetwork();
+        if (network == null) return false;
+        NetworkCapabilities capabilities = connectivityManager.getNetworkCapabilities(network);
+        return capabilities != null &&
+                (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                 capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                 capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET));
     }
 
     // LOGIKA IKLAN INTERSTITIAL
@@ -184,6 +264,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         if (adView != null) adView.pause();
         if (webView != null) webView.onPause();
+        // Lepas callback saat aplikasi diminimize untuk hemat daya
+        try {
+            connectivityManager.unregisterNetworkCallback(networkCallback);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         super.onPause();
     }
 
@@ -192,6 +278,22 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         if (adView != null) adView.resume();
         if (webView != null) webView.onResume();
+
+        // Daftarkan ulang callback saat aplikasi dibuka kembali
+        try {
+            NetworkRequest networkRequest = new NetworkRequest.Builder()
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .build();
+            connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // Cek ulang koneksi ketika user kembali ke aplikasi
+        if (!isInternetAvailable()) {
+            showOfflinePage(webView);
+            showOfflineDialog();
+        }
     }
 
     @Override
