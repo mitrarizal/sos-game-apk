@@ -68,12 +68,12 @@ public class MainActivity extends AppCompatActivity {
             adView.loadAd(new AdRequest.Builder().build());
         }
 
-        // 3. Konfigurasi WebView (Menggunakan HARDWARE untuk animasi game yang mulus & bebas kedap-kedip)
+        // 3. Konfigurasi WebView
         webView = findViewById(R.id.webview);
         webView.setBackgroundColor(Color.parseColor("#0f172a")); 
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);    
 
-        WebSettings webSettings = webView.getSettings();
+        WebSettings webSettings = webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
         webSettings.setDatabaseEnabled(true);
@@ -121,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Setup Network Callback (DIPERBAIKI: Tidak memuat ulang halaman otomatis agar tidak kedap-kedip saat main/ganti level)
+        // Setup Network Callback
         networkCallback = new ConnectivityManager.NetworkCallback() {
             @Override
             public void onAvailable(@NonNull Network network) {
@@ -164,7 +164,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // Fungsi menampilkan tampilan gambar offline di WebView
     private void showOfflinePage(WebView view) {
         String html = "<html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'>"
                 + "<style>body{display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background-color:#0f172a;}"
@@ -173,7 +172,6 @@ public class MainActivity extends AppCompatActivity {
         view.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "UTF-8", null);
     }
 
-    // Fungsi Dialog Peringatan Offline (Tidak bisa ditutup sembarangan)
     private void showOfflineDialog() {
         if (offlineDialog != null && offlineDialog.isShowing()) return;
 
@@ -198,7 +196,6 @@ public class MainActivity extends AppCompatActivity {
         offlineDialog.show();
     }
 
-    // Pengecek ketersediaan jaringan fisik
     private boolean isInternetAvailable() {
         if (connectivityManager == null) return false;
         Network network = connectivityManager.getActiveNetwork();
@@ -230,12 +227,16 @@ public class MainActivity extends AppCompatActivity {
                         public void onAdDismissedFullScreenContent() {
                             interstitialAd = null;
                             loadInterstitialAd();
+                            // KIRIM CALLBACK KE JAVASCRIPT AGAR GAME BISA LANJUT
+                            notifyJsAdClosed();
                         }
 
                         @Override
                         public void onAdFailedToShowFullScreenContent(@NonNull AdError adError) {
                             interstitialAd = null;
                             loadInterstitialAd();
+                            // KIRIM CALLBACK KE JAVASCRIPT JIKA GAGAL MUNCUL
+                            notifyJsAdClosed();
                         }
                     });
                 }
@@ -248,6 +249,15 @@ public class MainActivity extends AppCompatActivity {
             });
     }
 
+    // Fungsi untuk memanggil fungsi JavaScript di game HTML5/Blogger
+    private void notifyJsAdClosed() {
+        if (webView != null) {
+            webView.post(() -> {
+                webView.evaluateJavascript("javascript:if(typeof onAdClosed === 'function') { onAdClosed(); }", null);
+            });
+        }
+    }
+
     @JavascriptInterface
     public void panggilIklanInterstisial() {
         runOnUiThread(() -> {
@@ -255,16 +265,16 @@ public class MainActivity extends AppCompatActivity {
                 interstitialAd.show(MainActivity.this);
             } else {
                 loadInterstitialAd();
+                // Jika iklan belum siap, langsung panggil callback agar game tidak macet
+                notifyJsAdClosed();
             }
         });
     }
 
-    // SIKLUS HIDUP (LIFECYCLE MANAGEMENT)
     @Override
     protected void onPause() {
         if (adView != null) adView.pause();
         if (webView != null) webView.onPause();
-        // Lepas callback saat aplikasi diminimize untuk hemat daya
         try {
             connectivityManager.unregisterNetworkCallback(networkCallback);
         } catch (Exception e) {
@@ -274,12 +284,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onResume() {
+    protected voidonResume() {
         super.onResume();
         if (adView != null) adView.resume();
         if (webView != null) webView.onResume();
 
-        // Daftarkan ulang callback saat aplikasi dibuka kembali
         try {
             NetworkRequest networkRequest = new NetworkRequest.Builder()
                     .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
@@ -289,7 +298,6 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        // Cek ulang koneksi ketika user kembali ke aplikasi
         if (!isInternetAvailable()) {
             showOfflinePage(webView);
             showOfflineDialog();
