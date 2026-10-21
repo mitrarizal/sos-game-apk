@@ -11,8 +11,8 @@ android {
         applicationId "com.game.sos"
         minSdk 24
         targetSdk 36
-        versionCode 4 // Dinaikkan dari 3 agar bisa diunggah ulang ke Play Console
-        versionName "1.3"
+        versionCode 5 // Dinaikkan dari 3 agar bisa diunggah ulang ke Play Console
+        versionName "1.4"
     }
 
     signingConfigs {
