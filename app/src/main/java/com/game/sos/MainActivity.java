@@ -73,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
         webView.setBackgroundColor(Color.parseColor("#0f172a")); 
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);    
 
-        WebSettings webSettings = webSettings = webView.getSettings();
+        WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
         webSettings.setDatabaseEnabled(true);
@@ -227,7 +227,6 @@ public class MainActivity extends AppCompatActivity {
                         public void onAdDismissedFullScreenContent() {
                             interstitialAd = null;
                             loadInterstitialAd();
-                            // KIRIM CALLBACK KE JAVASCRIPT AGAR GAME BISA LANJUT
                             notifyJsAdClosed();
                         }
 
@@ -235,7 +234,6 @@ public class MainActivity extends AppCompatActivity {
                         public void onAdFailedToShowFullScreenContent(@NonNull AdError adError) {
                             interstitialAd = null;
                             loadInterstitialAd();
-                            // KIRIM CALLBACK KE JAVASCRIPT JIKA GAGAL MUNCUL
                             notifyJsAdClosed();
                         }
                     });
@@ -249,7 +247,6 @@ public class MainActivity extends AppCompatActivity {
             });
     }
 
-    // Fungsi untuk memanggil fungsi JavaScript di game HTML5/Blogger
     private void notifyJsAdClosed() {
         if (webView != null) {
             webView.post(() -> {
@@ -265,7 +262,6 @@ public class MainActivity extends AppCompatActivity {
                 interstitialAd.show(MainActivity.this);
             } else {
                 loadInterstitialAd();
-                // Jika iklan belum siap, langsung panggil callback agar game tidak macet
                 notifyJsAdClosed();
             }
         });
@@ -284,7 +280,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected voidonResume() {
+    protected void onResume() {
         super.onResume();
         if (adView != null) adView.resume();
         if (webView != null) webView.onResume();
