@@ -42,7 +42,6 @@ public class MainActivity extends AppCompatActivity {
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback networkCallback;
     private AlertDialog offlineDialog;
-    private boolean isFirstLoad = true;
 
     // Status loading untuk mencegah multiple request ke AdMob
     private boolean isInterstitialLoading = false;
@@ -69,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
             adView.loadAd(new AdRequest.Builder().build());
         }
 
-        // 3. Konfigurasi WebView
+        // 3. Konfigurasi WebView (Menggunakan HARDWARE untuk animasi game yang mulus & bebas kedap-kedip)
         webView = findViewById(R.id.webview);
         webView.setBackgroundColor(Color.parseColor("#0f172a")); 
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);    
@@ -122,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Setup Network Callback untuk deteksi online/offline secara realtime
+        // Setup Network Callback (DIPERBAIKI: Tidak memuat ulang halaman otomatis agar tidak kedap-kedip saat main/ganti level)
         networkCallback = new ConnectivityManager.NetworkCallback() {
             @Override
             public void onAvailable(@NonNull Network network) {
@@ -130,16 +129,17 @@ public class MainActivity extends AppCompatActivity {
                     if (offlineDialog != null && offlineDialog.isShowing()) {
                         offlineDialog.dismiss();
                     }
-                    // Muat ulang halaman blog jika sebelumnya offline
-                    if (webView != null) {
-                        webView.reload();
-                    }
                 });
             }
 
             @Override
             public void onLost(@NonNull Network network) {
-                runOnUiThread(() -> showOfflineDialog());
+                runOnUiThread(() -> {
+                    if (webView != null) {
+                        showOfflinePage(webView);
+                    }
+                    showOfflineDialog();
+                });
             }
         };
 
