@@ -1,25 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:ads="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#0f172a">
 
-    <!-- 1. AdView diletakkan di bawah terlebih dahulu agar ID-nya sudah terbaca -->
-    <com.google.android.gms.ads.AdView
-        android:id="@+id/adView"
+    <!-- 1. Wadah Iklan Native diletakkan di bawah -->
+    <FrameLayout
+        android:id="@+id/nativeAdContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        ads:adSize="BANNER"
-        ads:adUnitId="ca-app-pub-6983364109428063/6526672409" />
+        android:layout_centerHorizontal="true" />
 
-    <!-- 2. WebView berada di atas AdView -->
+    <!-- 2. WebView berada di atas nativeAdContainer -->
     <WebView
         android:id="@+id/webview"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@id/adView"
+        android:layout_above="@id/nativeAdContainer"
         android:visibility="invisible" />
 
     <!-- 3. Loading Indicator berada di paling atas (ditengah layar) -->
