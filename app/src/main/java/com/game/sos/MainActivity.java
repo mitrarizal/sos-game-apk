@@ -16,25 +16,34 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.TextView;
+
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.ads.AdError;
+import com.google.android.gms.ads.AdLoader;
 import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.ads.interstitial.InterstitialAd;
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
+import com.google.android.gms.ads.nativead.NativeAd;
+import com.google.android.gms.ads.nativead.NativeAdOptions;
+import com.google.android.gms.ads.nativead.NativeAdView;
 
 public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
-    private AdView adView;
+    private FrameLayout nativeAdContainer;
+    private NativeAd currentNativeAd;
     private InterstitialAd interstitialAd;
     private ProgressBar progressBar;
 
@@ -46,8 +55,9 @@ public class MainActivity extends AppCompatActivity {
     // Status loading untuk mencegah multiple request ke AdMob
     private boolean isInterstitialLoading = false;
 
-    // ID Unit Iklan Interstitial
+    // ID Unit Iklan Interstitial & Native
     private static final String INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-6983364109428063/8538592226";
+    private static final String NATIVE_AD_UNIT_ID = "ca-app-pub-6983364109428063/1826967343";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,20 +65,16 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         progressBar = findViewById(R.id.progressBar);
+        nativeAdContainer = findViewById(R.id.nativeAdContainer);
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
-        // 1. Inisialisasi SDK AdMob & Preload Iklan Interstitial
+        // 1. Inisialisasi SDK AdMob & Preload Iklan
         MobileAds.initialize(this, initializationStatus -> {
             loadInterstitialAd();
+            loadNativeAd();
         });
 
-        // 2. Banner Ad
-        adView = findViewById(R.id.adView);
-        if (adView != null) {
-            adView.loadAd(new AdRequest.Builder().build());
-        }
-
-        // 3. Konfigurasi WebView
+        // 2. Konfigurasi WebView
         webView = findViewById(R.id.webview);
         webView.setBackgroundColor(Color.parseColor("#0f172a")); 
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);    
@@ -162,6 +168,70 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    private void loadNativeAd() {
+        AdLoader adLoader = new AdLoader.Builder(this, NATIVE_AD_UNIT_ID)
+                .forNativeAd(nativeAd -> {
+                    if (isFinishing() || isDestroyed()) {
+                        nativeAd.destroy();
+                        return;
+                    }
+                    if (currentNativeAd != null) {
+                        currentNativeAd.destroy();
+                    }
+                    currentNativeAd = nativeAd;
+
+                    NativeAdView adView = (NativeAdView) getLayoutInflater().inflate(R.layout.native_ad_layout, null);
+                    populateNativeAdView(nativeAd, adView);
+
+                    nativeAdContainer.removeAllViews();
+                    nativeAdContainer.addView(adView);
+                })
+                .withAdListener(new com.google.android.gms.ads.AdListener() {
+                    @Override
+                    public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                        // Penanganan saat iklan native gagal dimuat
+                    }
+                })
+                .withNativeAdOptions(new NativeAdOptions.Builder().build())
+                .build();
+
+        adLoader.loadAd(new AdRequest.Builder().build());
+    }
+
+    private void populateNativeAdView(NativeAd nativeAd, NativeAdView adView) {
+        adView.setHeadlineView(adView.findViewById(R.id.ad_headline));
+        adView.setBodyView(adView.findViewById(R.id.ad_body));
+        adView.setCallToActionView(adView.findViewById(R.id.ad_call_to_action));
+        adView.setIconView(adView.findViewById(R.id.ad_app_icon));
+
+        if (nativeAd.getHeadline() != null) {
+            ((TextView) adView.getHeadlineView()).setText(nativeAd.getHeadline());
+        }
+
+        if (nativeAd.getBody() == null) {
+            adView.getBodyView().setVisibility(View.INVISIBLE);
+        } else {
+            adView.getBodyView().setVisibility(View.VISIBLE);
+            ((TextView) adView.getBodyView()).setText(nativeAd.getBody());
+        }
+
+        if (nativeAd.getCallToAction() == null) {
+            adView.getCallToActionView().setVisibility(View.INVISIBLE);
+        } else {
+            adView.getCallToActionView().setVisibility(View.VISIBLE);
+            ((Button) adView.getCallToActionView()).setText(nativeAd.getCallToAction());
+        }
+
+        if (nativeAd.getIcon() == null) {
+            adView.getIconView().setVisibility(View.GONE);
+        } else {
+            ((ImageView) adView.getIconView()).setImageDrawable(nativeAd.getIcon().getDrawable());
+            adView.getIconView().setVisibility(View.VISIBLE);
+        }
+
+        adView.setNativeAd(nativeAd);
     }
 
     private void showOfflinePage(WebView view) {
@@ -269,7 +339,6 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
-        if (adView != null) adView.pause();
         if (webView != null) webView.onPause();
         try {
             connectivityManager.unregisterNetworkCallback(networkCallback);
@@ -282,7 +351,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (adView != null) adView.resume();
         if (webView != null) webView.onResume();
 
         try {
@@ -302,7 +370,9 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if (adView != null) adView.destroy();
+        if (currentNativeAd != null) {
+            currentNativeAd.destroy();
+        }
         if (webView != null) webView.destroy();
         super.onDestroy();
     }
