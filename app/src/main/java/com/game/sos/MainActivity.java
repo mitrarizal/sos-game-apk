@@ -3,6 +3,7 @@ package com.game.sos;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -26,6 +27,8 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.gms.ads.AdError;
 import com.google.android.gms.ads.AdLoader;
@@ -51,6 +54,8 @@ public class MainActivity extends AppCompatActivity {
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback networkCallback;
     private AlertDialog offlineDialog;
+    private boolean isOfflineState = false;
+    private boolean isKeyboardVisible = false;
 
     // Status loading untuk mencegah multiple request ke AdMob
     private boolean isInterstitialLoading = false;
@@ -58,15 +63,29 @@ public class MainActivity extends AppCompatActivity {
     // ID Unit Iklan Interstitial & Native
     private static final String INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-6983364109428063/8538592226";
     private static final String NATIVE_AD_UNIT_ID = "ca-app-pub-6983364109428063/1826967343";
+    private static final String GAME_URL = "https://gameedukatif17.blogspot.com/";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().setBackgroundDrawable(new ColorDrawable(Color.parseColor("#0f172a")));
         setContentView(R.layout.activity_main);
 
         progressBar = findViewById(R.id.progressBar);
         nativeAdContainer = findViewById(R.id.nativeAdContainer);
+        nativeAdContainer.setVisibility(View.GONE);
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        // Sembunyikan iklan otomatis saat keyboard muncul agar layar game tetap lega
+        ViewCompat.setOnApplyWindowInsetsListener(nativeAdContainer, (v, insets) -> {
+            isKeyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
+            if (isKeyboardVisible) {
+                v.setVisibility(View.GONE);
+            } else if (currentNativeAd != null && !isOfflineState) {
+                v.setVisibility(View.VISIBLE);
+            }
+            return ViewCompat.onApplyWindowInsets(v, insets);
+        });
 
         // 1. Inisialisasi SDK AdMob & Preload Iklan
         MobileAds.initialize(this, initializationStatus -> {
@@ -76,8 +95,8 @@ public class MainActivity extends AppCompatActivity {
 
         // 2. Konfigurasi WebView
         webView = findViewById(R.id.webview);
-        webView.setBackgroundColor(Color.parseColor("#0f172a")); 
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);    
+        webView.setBackgroundColor(Color.parseColor("#0f172a"));
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
         WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
@@ -91,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
 
         webView.addJavascriptInterface(this, "AndroidApp");
         webView.setWebChromeClient(new WebChromeClient());
-        
+
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -99,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
                 if (url.contains("gameedukatif17.blogspot.com")) {
                     return false;
                 }
-                return true; 
+                return true;
             }
 
             @Override
@@ -122,6 +141,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
+                    isOfflineState = true;
                     showOfflinePage(view);
                 }
             }
@@ -135,12 +155,22 @@ public class MainActivity extends AppCompatActivity {
                     if (offlineDialog != null && offlineDialog.isShowing()) {
                         offlineDialog.dismiss();
                     }
+                    if (isOfflineState && webView != null) {
+                        isOfflineState = false;
+                        webView.loadUrl(GAME_URL);
+                        if (currentNativeAd != null && !isKeyboardVisible) {
+                            nativeAdContainer.setVisibility(View.VISIBLE);
+                        } else if (currentNativeAd == null) {
+                            loadNativeAd();
+                        }
+                    }
                 });
             }
 
             @Override
             public void onLost(@NonNull Network network) {
                 runOnUiThread(() -> {
+                    isOfflineState = true;
                     if (webView != null) {
                         showOfflinePage(webView);
                     }
@@ -151,10 +181,12 @@ public class MainActivity extends AppCompatActivity {
 
         // Cek internet di awal pembukaan aplikasi
         if (!isInternetAvailable()) {
+            isOfflineState = true;
             showOfflinePage(webView);
             showOfflineDialog();
         } else {
-            webView.loadUrl("https://gameedukatif17.blogspot.com/");
+            isOfflineState = false;
+            webView.loadUrl(GAME_URL);
         }
 
         // Penanganan tombol kembali modern
@@ -182,16 +214,21 @@ public class MainActivity extends AppCompatActivity {
                     }
                     currentNativeAd = nativeAd;
 
-                    NativeAdView adView = (NativeAdView) getLayoutInflater().inflate(R.layout.native_ad_layout, null);
+                    NativeAdView adView = (NativeAdView) getLayoutInflater()
+                            .inflate(R.layout.my_native_ad_view, nativeAdContainer, false);
                     populateNativeAdView(nativeAd, adView);
 
                     nativeAdContainer.removeAllViews();
                     nativeAdContainer.addView(adView);
+                    if (!isOfflineState && !isKeyboardVisible) {
+                        nativeAdContainer.setVisibility(View.VISIBLE);
+                    }
                 })
                 .withAdListener(new com.google.android.gms.ads.AdListener() {
                     @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                        // Penanganan saat iklan native gagal dimuat
+                        nativeAdContainer.removeAllViews();
+                        nativeAdContainer.setVisibility(View.GONE);
                     }
                 })
                 .withNativeAdOptions(new NativeAdOptions.Builder().build())
@@ -206,35 +243,42 @@ public class MainActivity extends AppCompatActivity {
         adView.setCallToActionView(adView.findViewById(R.id.ad_call_to_action));
         adView.setIconView(adView.findViewById(R.id.ad_app_icon));
 
-        if (nativeAd.getHeadline() != null) {
+        if (nativeAd.getHeadline() != null && adView.getHeadlineView() != null) {
             ((TextView) adView.getHeadlineView()).setText(nativeAd.getHeadline());
         }
 
-        if (nativeAd.getBody() == null) {
-            adView.getBodyView().setVisibility(View.INVISIBLE);
-        } else {
-            adView.getBodyView().setVisibility(View.VISIBLE);
-            ((TextView) adView.getBodyView()).setText(nativeAd.getBody());
+        if (adView.getBodyView() != null) {
+            if (nativeAd.getBody() == null) {
+                adView.getBodyView().setVisibility(View.GONE);
+            } else {
+                adView.getBodyView().setVisibility(View.VISIBLE);
+                ((TextView) adView.getBodyView()).setText(nativeAd.getBody());
+            }
         }
 
-        if (nativeAd.getCallToAction() == null) {
-            adView.getCallToActionView().setVisibility(View.INVISIBLE);
-        } else {
-            adView.getCallToActionView().setVisibility(View.VISIBLE);
-            ((Button) adView.getCallToActionView()).setText(nativeAd.getCallToAction());
+        if (adView.getCallToActionView() != null) {
+            if (nativeAd.getCallToAction() == null) {
+                adView.getCallToActionView().setVisibility(View.GONE);
+            } else {
+                adView.getCallToActionView().setVisibility(View.VISIBLE);
+                ((Button) adView.getCallToActionView()).setText(nativeAd.getCallToAction());
+            }
         }
 
-        if (nativeAd.getIcon() == null) {
-            adView.getIconView().setVisibility(View.GONE);
-        } else {
-            ((ImageView) adView.getIconView()).setImageDrawable(nativeAd.getIcon().getDrawable());
-            adView.getIconView().setVisibility(View.VISIBLE);
+        if (adView.getIconView() != null) {
+            if (nativeAd.getIcon() == null) {
+                adView.getIconView().setVisibility(View.GONE);
+            } else {
+                ((ImageView) adView.getIconView()).setImageDrawable(nativeAd.getIcon().getDrawable());
+                adView.getIconView().setVisibility(View.VISIBLE);
+            }
         }
 
         adView.setNativeAd(nativeAd);
     }
 
     private void showOfflinePage(WebView view) {
+        nativeAdContainer.setVisibility(View.GONE);
         String html = "<html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'>"
                 + "<style>body{display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background-color:#0f172a;}"
                 + "img{max-width:80%;height:auto;}</style></head>"
@@ -255,7 +299,13 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 dialog.dismiss();
                 if (webView != null) {
-                    webView.loadUrl("https://gameedukatif17.blogspot.com/");
+                    isOfflineState = false;
+                    webView.loadUrl(GAME_URL);
+                    if (currentNativeAd != null && !isKeyboardVisible) {
+                        nativeAdContainer.setVisibility(View.VISIBLE);
+                    } else if (currentNativeAd == null) {
+                        loadNativeAd();
+                    }
                 }
             }
         });
@@ -291,7 +341,7 @@ public class MainActivity extends AppCompatActivity {
                 public void onAdLoaded(@NonNull InterstitialAd ad) {
                     interstitialAd = ad;
                     isInterstitialLoading = false;
-                    
+
                     interstitialAd.setFullScreenContentCallback(new FullScreenContentCallback() {
                         @Override
                         public void onAdDismissedFullScreenContent() {
@@ -328,11 +378,13 @@ public class MainActivity extends AppCompatActivity {
     @JavascriptInterface
     public void panggilIklanInterstisial() {
         runOnUiThread(() -> {
-            if (interstitialAd != null) {
-                interstitialAd.show(MainActivity.this);
-            } else {
-                loadInterstitialAd();
-                notifyJsAdClosed();
+            if (!isFinishing() && !isDestroyed()) {
+                if (interstitialAd != null) {
+                    interstitialAd.show(MainActivity.this);
+                } else {
+                    loadInterstitialAd();
+                    notifyJsAdClosed();
+                }
             }
         });
     }
@@ -363,17 +415,37 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (!isInternetAvailable()) {
+            isOfflineState = true;
             showOfflinePage(webView);
             showOfflineDialog();
+        } else if (isOfflineState) {
+            if (offlineDialog != null && offlineDialog.isShowing()) {
+                offlineDialog.dismiss();
+            }
+            isOfflineState = false;
+            if (webView != null) {
+                webView.loadUrl(GAME_URL);
+            }
+            if (currentNativeAd != null && !isKeyboardVisible) {
+                nativeAdContainer.setVisibility(View.VISIBLE);
+            } else if (currentNativeAd == null) {
+                loadNativeAd();
+            }
         }
     }
 
     @Override
     protected void onDestroy() {
+        if (offlineDialog != null && offlineDialog.isShowing()) {
+            offlineDialog.dismiss();
+        }
+        nativeAdContainer.removeAllViews();
         if (currentNativeAd != null) {
             currentNativeAd.destroy();
         }
-        if (webView != null) webView.destroy();
+        if (webView != null) {
+            webView.destroy();
+        }
         super.onDestroy();
     }
 }
