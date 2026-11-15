@@ -215,7 +215,7 @@ public class MainActivity extends AppCompatActivity {
                     currentNativeAd = nativeAd;
 
                     NativeAdView adView = (NativeAdView) getLayoutInflater()
-                            .inflate(R.layout.my_native_ad_view, nativeAdContainer, false);
+                            .inflate(R.layout.native_ad_layout, nativeAdContainer, false);
                     populateNativeAdView(nativeAd, adView);
 
                     nativeAdContainer.removeAllViews();
