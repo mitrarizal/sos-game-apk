@@ -2,7 +2,8 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0f172a">
+    android:background="#0f172a"
+    android:fitsSystemWindows="true">
 
     <!-- 1. Wadah Iklan Native diletakkan di bawah -->
     <FrameLayout
@@ -10,7 +11,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true" />
+        android:layout_centerHorizontal="true"
+        android:background="#0f172a"
+        android:visibility="gone" />
 
     <!-- 2. WebView berada di atas nativeAdContainer -->
     <WebView
@@ -18,9 +21,10 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@id/nativeAdContainer"
+        android:background="#0f172a"
         android:visibility="invisible" />
 
-    <!-- 3. Loading Indicator berada di paling atas (ditengah layar) -->
+    <!-- 3. Loading Indicator berada di paling atas (di tengah layar) -->
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
