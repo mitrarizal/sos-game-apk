@@ -32,10 +32,11 @@
             android:layout_weight="1"
             android:orientation="vertical">
 
-            <!-- Baris 1: Lencana Ad sejajar judul (ringkas 1 baris) -->
+            <!-- Baris 1: Lencana Ad sejajar judul (marginEnd 22dp menjaga jarak aman dari ikon AdChoices) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginEnd="22dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
@@ -78,20 +79,24 @@
                 android:textSize="11sp" />
         </LinearLayout>
 
-        <!-- marginTop 12dp menyisakan ruang aman di pojok kanan atas untuk ikon AdChoices -->
+        <!-- Padding atas & bawah 0dp agar teks tombol tampil utuh di tengah -->
         <Button
             android:id="@+id/ad_call_to_action"
             android:layout_width="wrap_content"
             android:layout_height="28dp"
             android:layout_marginStart="6dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="14dp"
             android:backgroundTint="#2563EB"
+            android:gravity="center"
+            android:includeFontPadding="false"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:minWidth="0dp"
             android:minHeight="0dp"
             android:paddingStart="10dp"
+            android:paddingTop="0dp"
             android:paddingEnd="10dp"
+            android:paddingBottom="0dp"
             android:textColor="#FFFFFF"
             android:textSize="11sp"
             android:textStyle="bold" />
