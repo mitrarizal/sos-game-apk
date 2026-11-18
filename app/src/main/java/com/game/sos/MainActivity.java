@@ -9,6 +9,9 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
 import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
@@ -59,11 +62,20 @@ public class MainActivity extends AppCompatActivity {
 
     // Status loading untuk mencegah multiple request ke AdMob
     private boolean isInterstitialLoading = false;
+    private boolean isNativeAdLoading = false;
+
+    // Pengaturan percobaan ulang (retry) iklan native saat gagal dimuat
+    private final Handler adRetryHandler = new Handler(Looper.getMainLooper());
+    private int nativeAdRetryCount = 0;
+    private static final int MAX_AD_RETRY = 3;
+    private static final long RETRY_DELAY_MS = 15000L;
 
     // ID Unit Iklan Interstitial & Native
     private static final String INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-6983364109428063/8538592226";
     private static final String NATIVE_AD_UNIT_ID = "ca-app-pub-6983364109428063/1826967343";
     private static final String GAME_URL = "https://gameedukatif17.blogspot.com/";
+
+    private final Runnable retryNativeAdRunnable = this::loadNativeAd;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -158,11 +170,12 @@ public class MainActivity extends AppCompatActivity {
                     if (isOfflineState && webView != null) {
                         isOfflineState = false;
                         webView.loadUrl(GAME_URL);
-                        if (currentNativeAd != null && !isKeyboardVisible) {
-                            nativeAdContainer.setVisibility(View.VISIBLE);
-                        } else if (currentNativeAd == null) {
-                            loadNativeAd();
-                        }
+                    }
+                    if (currentNativeAd != null && !isKeyboardVisible && !isOfflineState) {
+                        nativeAdContainer.setVisibility(View.VISIBLE);
+                    } else if (currentNativeAd == null && !isOfflineState) {
+                        nativeAdRetryCount = 0;
+                        loadNativeAd();
                     }
                 });
             }
@@ -171,6 +184,7 @@ public class MainActivity extends AppCompatActivity {
             public void onLost(@NonNull Network network) {
                 runOnUiThread(() -> {
                     isOfflineState = true;
+                    adRetryHandler.removeCallbacks(retryNativeAdRunnable);
                     if (webView != null) {
                         showOfflinePage(webView);
                     }
@@ -203,12 +217,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadNativeAd() {
+        if (isFinishing() || isDestroyed() || isNativeAdLoading || !isInternetAvailable()) {
+            return;
+        }
+        isNativeAdLoading = true;
+
         AdLoader adLoader = new AdLoader.Builder(this, NATIVE_AD_UNIT_ID)
                 .forNativeAd(nativeAd -> {
+                    isNativeAdLoading = false;
                     if (isFinishing() || isDestroyed()) {
                         nativeAd.destroy();
                         return;
                     }
+                    nativeAdRetryCount = 0;
                     if (currentNativeAd != null) {
                         currentNativeAd.destroy();
                     }
@@ -227,8 +248,17 @@ public class MainActivity extends AppCompatActivity {
                 .withAdListener(new com.google.android.gms.ads.AdListener() {
                     @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                        isNativeAdLoading = false;
+                        Log.e("ADMOB_NATIVE", "Gagal muat iklan native | Kode: "
+                                + loadAdError.getCode() + " | Pesan: " + loadAdError.getMessage());
                         nativeAdContainer.removeAllViews();
                         nativeAdContainer.setVisibility(View.GONE);
+
+                        if (nativeAdRetryCount < MAX_AD_RETRY && !isOfflineState) {
+                            nativeAdRetryCount++;
+                            adRetryHandler.removeCallbacks(retryNativeAdRunnable);
+                            adRetryHandler.postDelayed(retryNativeAdRunnable, RETRY_DELAY_MS);
+                        }
                     }
                 })
                 .withNativeAdOptions(new NativeAdOptions.Builder().build())
@@ -304,6 +334,7 @@ public class MainActivity extends AppCompatActivity {
                     if (currentNativeAd != null && !isKeyboardVisible) {
                         nativeAdContainer.setVisibility(View.VISIBLE);
                     } else if (currentNativeAd == null) {
+                        nativeAdRetryCount = 0;
                         loadNativeAd();
                     }
                 }
@@ -393,7 +424,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         if (webView != null) webView.onPause();
         try {
-            connectivityManager.unregisterNetworkCallback(networkCallback);
+            if (connectivityManager != null && networkCallback != null) {
+                connectivityManager.unregisterNetworkCallback(networkCallback);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -406,10 +439,12 @@ public class MainActivity extends AppCompatActivity {
         if (webView != null) webView.onResume();
 
         try {
-            NetworkRequest networkRequest = new NetworkRequest.Builder()
-                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                    .build();
-            connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
+            if (connectivityManager != null && networkCallback != null) {
+                NetworkRequest networkRequest = new NetworkRequest.Builder()
+                        .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        .build();
+                connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -418,17 +453,20 @@ public class MainActivity extends AppCompatActivity {
             isOfflineState = true;
             showOfflinePage(webView);
             showOfflineDialog();
-        } else if (isOfflineState) {
-            if (offlineDialog != null && offlineDialog.isShowing()) {
-                offlineDialog.dismiss();
-            }
-            isOfflineState = false;
-            if (webView != null) {
-                webView.loadUrl(GAME_URL);
+        } else {
+            if (isOfflineState) {
+                if (offlineDialog != null && offlineDialog.isShowing()) {
+                    offlineDialog.dismiss();
+                }
+                isOfflineState = false;
+                if (webView != null) {
+                    webView.loadUrl(GAME_URL);
+                }
             }
             if (currentNativeAd != null && !isKeyboardVisible) {
                 nativeAdContainer.setVisibility(View.VISIBLE);
             } else if (currentNativeAd == null) {
+                nativeAdRetryCount = 0;
                 loadNativeAd();
             }
         }
@@ -436,6 +474,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        adRetryHandler.removeCallbacksAndMessages(null);
         if (offlineDialog != null && offlineDialog.isShowing()) {
             offlineDialog.dismiss();
         }
