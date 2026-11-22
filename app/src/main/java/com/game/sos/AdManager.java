@@ -37,9 +37,9 @@ import java.util.Date;
 public class AdManager implements DefaultLifecycleObserver {
 
     // Ganti dengan Unit ID Produksi AdMob Anda sebelum rilis ke Google Play
-    private static final String AD_UNIT_APP_OPEN = "ca-app-pub-3940256099942544/9257395921";
-    private static final String AD_UNIT_NATIVE = "ca-app-pub-3940256099942544/2247696110";
-    private static final String AD_UNIT_INTERSTITIAL = "ca-app-pub-3940256099942544/1033173712";
+    private static final String AD_UNIT_APP_OPEN = "ca-app-pub-6983364109428063/4766868173";
+    private static final String AD_UNIT_NATIVE = "ca-app-pub-6983364109428063/1826967343";
+    private static final String AD_UNIT_INTERSTITIAL = "ca-app-pub-6983364109428063/8538592226";
 
     // Jeda minimal (30 detik) antar iklan layar penuh agar mematuhi kebijakan pengalaman pengguna
     private static final long FULLSCREEN_AD_COOLDOWN_MS = 30_000L;
