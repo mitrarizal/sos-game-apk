@@ -11,13 +11,12 @@ android {
         applicationId "com.game.sos"
         minSdk 24
         targetSdk 36
-        versionCode 8 // Dinaikkan dari 3 agar bisa diunggah ulang ke Play Console
-        versionName "1.7"
+        versionCode 1
+        versionName "1.0.0"
     }
 
     signingConfigs {
         release {
-            // Membaca file keystore dan kredensial dari Environment Variables (GitHub Secrets)
             storeFile file(System.getenv("KEYSTORE_FILE_PATH") ?: "keystore.jks")
             storePassword System.getenv("KEYSTORE_PASSWORD")
             keyAlias System.getenv("KEY_ALIAS")
@@ -28,8 +27,8 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            minifyEnabled true // Mengaktifkan R8 compiler, obfuscation, dan optimasi DEX
-            shrinkResources true // Menghapus file resource/asset yang tidak digunakan
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -41,11 +40,14 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.11.0'
-    implementation 'com.google.android.gms:play-services-ads:23.0.0'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.lifecycle:lifecycle-process:2.8.7'
 
-    // Menggunakan Firebase BoM versi stabil (v32.8.1) yang aman untuk Java & tanpa DataStore
-    implementation platform('com.google.firebase:firebase-bom:32.8.1')
+    // Google Mobile Ads SDK (Mendukung SDK 36 & izin AD_ID terbaru)
+    implementation 'com.google.android.gms:play-services-ads:23.6.0'
+
+    // Firebase BoM & Analytics
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
     implementation 'com.google.firebase:firebase-analytics'
 }
