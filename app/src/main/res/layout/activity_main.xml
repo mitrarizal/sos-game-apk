@@ -2,33 +2,22 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0f172a"
-    android:fitsSystemWindows="true">
+    android:background="#F0F9FF">
 
-    <!-- 1. Wadah Iklan Native diletakkan di bawah -->
+    <WebView
+        android:id="@+id/game_webview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Kontainer Native Advanced (Hanya tampil di Layar Home saat tidak sedang bermain) -->
     <FrameLayout
-        android:id="@+id/nativeAdContainer"
+        android:id="@+id/native_ad_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:background="#0f172a"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="12dp"
         android:visibility="gone" />
-
-    <!-- 2. WebView berada di atas nativeAdContainer -->
-    <WebView
-        android:id="@+id/webview"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_above="@id/nativeAdContainer"
-        android:background="#0f172a"
-        android:visibility="invisible" />
-
-    <!-- 3. Loading Indicator berada di paling atas (di tengah layar) -->
-    <ProgressBar
-        android:id="@+id/progressBar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true" />
 
 </RelativeLayout>
